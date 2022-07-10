@@ -1,36 +1,49 @@
-"""
-PDGA ratings estimator
-
-Asks for tournament ratings inputs for values not included in current
-PDGA rating. Then calculates the estimated new ratings
-
-TODO:
-    Include function to remove ratings that fall below the standard deviation
-"""
-
-from gc import get_referents
 from requests_html import HTMLSession
-
+from pandas import DataFrame
 import pandas as pd
 import numpy as np
 from typing import List
 
 
 def get_ratings_detail(pdga_num: int):
+    """Get ratings details from PDGA player details page
+
+    Args:
+        pdga_num (int): Player PDGA number
+
+    Returns:
+        response: HTML page python requests response
+    """
     details_url = f'https://www.pdga.com/player/{pdga_num}/details'
-    s = HTMLSession()
-    r = s.get(details_url)
-    return r
+    session = HTMLSession()
+    response = session.get(details_url)
+    return response
 
 
-def get_current_rating(results: str):
+def get_current_rating(results: str) -> int:
+    """Get player's current rating
+
+    Args:
+        results (response): Requests response
+
+    Returns:
+        int: Player's current rating
+    """
     rating_raw = results.html.find('.current-rating', first=True).text
     current_loc_start = rating_raw.find(':')
     current_rating = rating_raw[current_loc_start +1:].strip().split(' ')[0]
     return int(current_rating)
 
 
-def trans_data(results: str):
+def convert_dates(df, date_col='Date', format='%d-%b-%Y') -> DataFrame:
+    # Format dates to datetime date, remove multi date spans
+    df_dates = df.copy()
+    df_dates[date_col] = df_dates[date_col].str.split(' to ').str[-1].str.strip()
+    df_dates[date_col] = pd.to_datetime(df_dates[date_col], format=format)
+    return df_dates
+
+
+def trans_data(results: str) -> DataFrame:
     table = results.html.find('table', first=True)
 
     # HTML table to DataFrame
@@ -45,15 +58,50 @@ def trans_data(results: str):
     df_include['Included'] = df_include['Included'].map({'Yes': True, 'No': False})
 
     # Format dates to datetime date, remove multi date spans
-    df_dates = df_include.copy()
-    df_dates['Date'] = df_dates['Date'].str.split('to').str[-1].str.strip()
-    df_dates['Date'] = pd.to_datetime(df_dates['Date'], format='%d-%b-%Y')
+    df_dates = convert_dates(df_include.copy())
 
     # Filter results to ratings that are counted towards current rating
     df_results = df_dates.copy()
     df_results = df_results.loc[df_results['Included'] == True]
 
     return df_results
+
+
+# Get current year tournaments played page
+def get_tour_results_page(pdga_num: int):
+    details_url = f'https://www.pdga.com/player/{pdga_num}'
+    s = HTMLSession()
+    r = s.get(details_url)
+    return r
+
+
+def trans_tour_data(results: str) -> DataFrame:
+    # WIP
+    table = results.html.find('.table-container', first=True)
+    table_df = pd.read_html(table.html)
+    df = table_df[0]
+    df_dates = convert_dates(df.copy(), 'Dates')
+    
+    return df_dates
+
+def get_ratings_dates() -> DataFrame:
+    """Get dates when ratings will be updated
+
+    ### WIP ###
+
+    Returns:
+        _type_: _description_
+    """
+    ratings_updates_url = "https://www.pdga.com/faq/ratings/when-updated"
+    s = HTMLSession()
+    r = s.get(ratings_updates_url)
+    table = r.html.find('table', first=True)
+    # HTML table to DataFrame
+    table_df = pd.read_html(table.html)
+    df = table_df[0]
+    # Convert dates
+    dates = convert_dates(df, 'Ratings Publication Date', '%B %d, %Y')
+    return dates['Ratings Publication Date']
 
 
 # Standard deviation plus 2.5 pdga threashold
@@ -83,7 +131,7 @@ def total_score(ratings: List):
 
 # Manually input new ratings to calculate
 # Modify to pull from tournaments not submitted to pdga
-def manual_ratings():
+def manual_ratings() -> List:
     new_ratings = []
 
     while True:
