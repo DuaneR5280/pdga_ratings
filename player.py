@@ -28,11 +28,14 @@ class Player:
             d = [_.strip() for _ in dates.split('to')]
             end_date = datetime.strptime(d[1], '%d-%b-%Y').date()
             start_date = datetime.strptime(d[0] + f'-{end_date.year}', '%d-%b-%Y').date()
-            return {'start': start_date, 'end': end_date}
         elif ',' in dates:
-            return datetime.strptime(dates, '%a, %b %d, %Y').date()
+            start_date = datetime.strptime(dates, '%a, %b %d, %Y').date()
+            end_date = start_date
         else:
-            return datetime.strptime(dates, '%d-%b-%Y').date()
+            start_date = datetime.strptime(dates, '%d-%b-%Y').date()
+            end_date = start_date
+        num_days = end_date - start_date
+        return {'start': start_date, 'end': end_date, 'num_days': num_days.days +1}
 
     # Stats info
     def get_stats_by_class(self, css_class) -> int:
@@ -43,15 +46,15 @@ class Player:
 
     def get_rating(self) -> int:
         self.rating = self.get_stats_by_class('current-rating')
-        return self.rating
+        return int(self.rating)
     
     def get_career_events(self) -> int:
         self.career_events = self.get_stats_by_class('career-events')
-        return self.career_events
+        return int(self.career_events)
  
     def get_career_wins(self) -> int:
-        self.wins = self.get_stats_by_class('career-wins')
-        return self.wins
+        self.career_wins = self.get_stats_by_class('career-wins')
+        return int(self.career_wins)
 
     def get_upcoming_events(self) -> List:
         upcoming_list = self.r_stats.html.find('.upcoming-events li')
@@ -59,8 +62,8 @@ class Player:
         for event in upcoming_list:
             loc = event.text.find(':')
             e = {
-                'date': self.convert_dates(event.text[:loc].strip()),
-                'name': event.text[loc +1:].strip(),
+                'dates': self.convert_dates(event.text[:loc].strip()),
+                'tournament': event.text[loc +1:].strip(),
                 'link': list(event.absolute_links)[0]
             }
             self.upcoming.append(e)
@@ -91,5 +94,6 @@ class Player:
 
 
 # Testing
-duane = Player(51790)
-frank = Player(176215)
+# from models import PlayerBase
+# duane = PlayerBase(**Player(51790).__dict__)
+# frank = PlayerBase(**Player(176215).__dict__)
