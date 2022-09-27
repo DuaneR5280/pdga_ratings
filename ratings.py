@@ -5,79 +5,80 @@ import pandas as pd
 import numpy as np
 from typing import List
 from datetime import date, timedelta
+from player import Player
 
 
-# def get_ratings_detail(pdga_num: int):
-#     """Get ratings details from PDGA player details page
+def get_ratings_detail(pdga_num: int):
+    """Get ratings details from PDGA player details page
 
-#     Args:
-#         pdga_num (int): Player PDGA number
+    Args:
+        pdga_num (int): Player PDGA number
 
-#     Returns:
-#         response: HTML page python requests response
-#     """
-#     details_url = f'https://www.pdga.com/player/{pdga_num}/details'
-#     session = HTMLSession()
-#     response = session.get(details_url)
-#     return response
-
-
-# def get_player_stats(pdga_num: int):
-#     """Get current year tournaments played page
-
-#     Args:
-#         pdga_num (int): PDGA number
-
-#     Returns:
-#         response: requests response
-#     """
-#     details_url = f'https://www.pdga.com/player/{pdga_num}'
-#     s = HTMLSession()
-#     r = s.get(details_url)
-#     return r
+    Returns:
+        response: HTML page python requests response
+    """
+    details_url = f'https://www.pdga.com/player/{pdga_num}/details'
+    session = HTMLSession()
+    response = session.get(details_url)
+    return response
 
 
-# def get_single_tournament(t_url: str):
-#     s = HTMLSession()
-#     r = s.get(t_url)
-#     return r
+def get_player_stats(pdga_num: int):
+    """Get current year tournaments played page
+
+    Args:
+        pdga_num (int): PDGA number
+
+    Returns:
+        response: requests response
+    """
+    details_url = f'https://www.pdga.com/player/{pdga_num}'
+    s = HTMLSession()
+    r = s.get(details_url)
+    return r
 
 
-# def get_current_rating(results) -> int:
-#     """Get player's current rating from get_player_stats()
-
-#     Args:
-#         results (response): Requests response
-
-#     Returns:
-#         int: Player's current rating
-#     """
-#     rating_raw = results.html.find('.current-rating', first=True).text
-#     current_loc_start = rating_raw.find(':')
-#     current_rating = rating_raw[current_loc_start +1:].strip().split(' ')[0]
-#     return int(current_rating)
+def get_single_tournament(t_url: str):
+    s = HTMLSession()
+    r = s.get(t_url)
+    return r
 
 
-# def convert_dates(df, date_col='Date', format='%d-%b-%Y') -> DataFrame:
-#     """Convert Dates in DataFrame Date column (str) to Datetime.Date
+def get_current_rating(results) -> int:
+    """Get player's current rating from get_player_stats()
+
+    Args:
+        results (response): Requests response
+
+    Returns:
+        int: Player's current rating
+    """
+    rating_raw = results.html.find('.current-rating', first=True).text
+    current_loc_start = rating_raw.find(':')
+    current_rating = rating_raw[current_loc_start +1:].strip().split(' ')[0]
+    return int(current_rating)
+
+
+def convert_dates(df, date_col='Date', format='%d-%b-%Y') -> DataFrame:
+    """Convert Dates in DataFrame Date column (str) to Datetime.Date
     
-#     Format dates to datetime date, remove multi date spans
+    Format dates to datetime date, remove multi date spans
 
-#     Example:
-#         '3-Sep to 4-Sep-2022' to 2022-09-04
+    Example:
+        '3-Sep to 4-Sep-2022' to 2022-09-04
 
-#     Args:
-#         df (DataFrame): Dates(str) in table from PDGA web pages
-#         date_col (str, optional): Date Column of DataFrame. Defaults to 'Date'.
-#         format (str, optional): Existing date string format = Day-Month-Year. Defaults to '%d-%b-%Y'.
+    Args:
+        df (DataFrame): Dates(str) in table from PDGA web pages
+        date_col (str, optional): Date Column of DataFrame. Defaults to 'Date'.
+        format (str, optional): Existing date string format = Day-Month-Year. Defaults to '%d-%b-%Y'.
 
-#     Returns:
-#         DataFrame: Tournament data with proper formated Datetime.Date in Date column    
-#     """
-#     df_dates = df.copy()
-#     df_dates[date_col] = df_dates[date_col].str.split(' to ').str[-1].str.strip()
-#     df_dates[date_col] = pd.to_datetime(df_dates[date_col], format=format)
-#     return df_dates
+    Returns:
+        DataFrame: Tournament data with proper formated Datetime.Date in Date column    
+    """
+    df_dates = df.copy()
+    df_dates[date_col] = df_dates[date_col].str.split(' to ').str[-1].str.strip()
+    df_dates[date_col] = pd.to_datetime(df_dates[date_col], format=format)
+    return df_dates
 
 
 def trans_data(results) -> DataFrame:
@@ -306,10 +307,9 @@ def ratings_pub_date(current_month = date(date.today().year, date.today().month,
 
 
 if __name__ == "__main__":
-    ratings_detail = get_ratings_detail(input('Enter PDGA Number: '))
-    df_results = trans_data(ratings_detail)
-    current_rating = get_current_rating(ratings_detail)
-    print(f'Current Rating: {current_rating}\n')
+    player = Player(input('Enter PDGA Number: '))
+    df_results = trans_data(player.r_detail)
+    print(f'Current Rating: {player.rating}\n')
     new_ratings = manual_ratings()
-    new_rating = combine_ratings(list(df_results["Rating"]), new_ratings, current_rating)
+    new_rating = combine_ratings(list(df_results["Rating"]), new_ratings, player.rating)
     print(f'\nNew Estimated Rating: {new_rating}')
