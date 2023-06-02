@@ -7,6 +7,7 @@ from typing import List
 from datetime import date, timedelta
 from dateutil.relativedelta import relativedelta
 from player import Player
+from models import PlayerBase
 from rich import print
 
 
@@ -380,5 +381,6 @@ if __name__ == "__main__":
     # filters ratings to be dropped based on new rating publish date
     # needs updated to use date of last rated round.
     df = filter_df(df_results)
+    player = PlayerBase(**player.__dict__)
     new_rating = combine_ratings(list(df["Rating"]), new_ratings, player.rating)
     compare_ratings(new_rating, player.rating)
