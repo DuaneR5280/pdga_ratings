@@ -141,17 +141,6 @@ def trans_stats(results) -> DataFrame:
     return df_dates
 
 
-def tournaments_list(df_dates: DataFrame) -> List:
-    # generate a list of tournament names not included in df_results
-    # doesn't work well because we need the hyperlink to the tournament
-    # to get the results
-    # Here for reference
-    tournaments_not_included = list(
-        df_dates[~df_dates.Tournament.isin(df_results["Tournament"])]["Tournament"]
-    )
-    return tournaments_not_included
-
-
 def convert_links(links: List) -> List:
     """Convert Links List(set) to List(str)
 
@@ -203,6 +192,8 @@ def tournament_links(results) -> List:
 
 def compare_tournaments(list1, list2) -> List:
     """Compare list of tournaments from player stats page (list1) with ratings detail page (list2)
+
+    Order is important!
 
     Args:
         list1 (str): Tournament list from Player Stats page (https://www.pdga.com/player/51790)
@@ -270,7 +261,6 @@ def total_score(ratings: List):
 # Modify to pull from tournaments not submitted to pdga
 def manual_ratings() -> List:
     new_ratings = []
-
     while True:
         rating_input = input("Add tournament rating [enter to finish]: ")
         if rating_input:
@@ -371,16 +361,31 @@ def compare_ratings(new_rating, player_rating):
     return rating_diff
 
 
+def auto_import_ratings(player):
+    """Scrape pending tournament ratings"""
+    posted_tour_links = tournament_links(player.r_detail)
+    current_year_links = tournament_links(player.r_stats)
+    pending_links = compare_tournaments(current_year_links, posted_tour_links)
+    r_tours = [get_single_tournament(link) for link in pending_links]
+    ratings = [get_single_tour_ratings(tour, int(player.pdga_num)) for tour in r_tours]
+    final_ratings = [item for sublist in ratings for item in sublist]
+    return final_ratings
+
+
 if __name__ == "__main__":
     player = Player(input("Enter PDGA Number: "))
     df_results = trans_data(player.r_detail)
     print(f"Current Rating: {player.rating}\n")
-    new_ratings = manual_ratings()
-    # Original
-    # new_rating = combine_ratings(list(df_results["Rating"]), new_ratings, player.rating)
+    answer = input("Do you want to manually input ratings? [Y/n] ")
+    if answer in ["yes", "y", "1"]:
+        new_ratings = manual_ratings()
+    else:
+        new_ratings = auto_import_ratings(player)
+        print()
+        print(new_ratings)
     # filters ratings to be dropped based on new rating publish date
-    # needs updated to use date of last rated round.
+    # needs updated to use date of last rated round
     df = filter_df(df_results)
-    player = PlayerBase(**player.__dict__)
     new_rating = combine_ratings(list(df["Rating"]), new_ratings, player.rating)
     compare_ratings(new_rating, player.rating)
+    # player_obj = PlayerBase(**player.__dict__)  # convert player object to model for database input
