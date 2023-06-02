@@ -5,7 +5,9 @@ import pandas as pd
 import numpy as np
 from typing import List
 from datetime import date, timedelta
+from dateutil.relativedelta import relativedelta
 from player import Player
+from rich import print
 
 
 def get_ratings_detail(pdga_num: int):
@@ -17,7 +19,7 @@ def get_ratings_detail(pdga_num: int):
     Returns:
         response: HTML page python requests response
     """
-    details_url = f'https://www.pdga.com/player/{pdga_num}/details'
+    details_url = f"https://www.pdga.com/player/{pdga_num}/details"
     session = HTMLSession()
     response = session.get(details_url)
     return response
@@ -32,7 +34,7 @@ def get_player_stats(pdga_num: int):
     Returns:
         response: requests response
     """
-    details_url = f'https://www.pdga.com/player/{pdga_num}'
+    details_url = f"https://www.pdga.com/player/{pdga_num}"
     s = HTMLSession()
     r = s.get(details_url)
     return r
@@ -53,15 +55,15 @@ def get_current_rating(results) -> int:
     Returns:
         int: Player's current rating
     """
-    rating_raw = results.html.find('.current-rating', first=True).text
-    current_loc_start = rating_raw.find(':')
-    current_rating = rating_raw[current_loc_start +1:].strip().split(' ')[0]
+    rating_raw = results.html.find(".current-rating", first=True).text
+    current_loc_start = rating_raw.find(":")
+    current_rating = rating_raw[current_loc_start + 1 :].strip().split(" ")[0]
     return int(current_rating)
 
 
-def convert_dates(df, date_col='Date', format='%d-%b-%Y') -> DataFrame:
+def convert_dates(df, date_col="Date", format="%d-%b-%Y") -> DataFrame:
     """Convert Dates in DataFrame Date column (str) to Datetime.Date
-    
+
     Format dates to datetime date, remove multi date spans
 
     Example:
@@ -73,10 +75,10 @@ def convert_dates(df, date_col='Date', format='%d-%b-%Y') -> DataFrame:
         format (str, optional): Existing date string format = Day-Month-Year. Defaults to '%d-%b-%Y'.
 
     Returns:
-        DataFrame: Tournament data with proper formated Datetime.Date in Date column    
+        DataFrame: Tournament data with proper formated Datetime.Date in Date column
     """
     df_dates = df.copy()
-    df_dates[date_col] = df_dates[date_col].str.split(' to ').str[-1].str.strip()
+    df_dates[date_col] = df_dates[date_col].str.split(" to ").str[-1].str.strip()
     df_dates[date_col] = pd.to_datetime(df_dates[date_col], format=format)
     return df_dates
 
@@ -93,7 +95,7 @@ def trans_data(results) -> DataFrame:
     Returns:
         DataFrame: Tournament table
     """
-    table = results.html.find('table', first=True)
+    table = results.html.find("table", first=True)
 
     # HTML table to DataFrame
     table_df = pd.read_html(table.html)
@@ -101,17 +103,17 @@ def trans_data(results) -> DataFrame:
 
     # Convert Yes/No to Bool
     df_eval = df.copy()
-    df_eval['Evaluated'] = df_eval['Evaluated'].map({'Yes': True, 'No': False})
+    df_eval["Evaluated"] = df_eval["Evaluated"].map({"Yes": True, "No": False})
 
     df_include = df_eval.copy()
-    df_include['Included'] = df_include['Included'].map({'Yes': True, 'No': False})
+    df_include["Included"] = df_include["Included"].map({"Yes": True, "No": False})
 
     # Format dates to datetime date, remove multi date spans
     df_dates = convert_dates(df_include.copy())
 
     # Filter results to ratings that are counted towards current rating
     df_results = df_dates.copy()
-    df_results = df_results.loc[df_results['Included'] == True]
+    df_results = df_results.loc[df_results["Included"] == True]
 
     return df_results
 
@@ -131,10 +133,10 @@ def trans_stats(results) -> DataFrame:
         DataFrame: Tournament table
     """
 
-    table = results.html.find('.table-container')
+    table = results.html.find(".table-container")
     table_df = [pd.read_html(t.html)[0] for t in table]
     df = pd.concat(table_df, axis=0, ignore_index=True)
-    df_dates = convert_dates(df.copy(), 'Dates')
+    df_dates = convert_dates(df.copy(), "Dates")
     return df_dates
 
 
@@ -143,7 +145,9 @@ def tournaments_list(df_dates: DataFrame) -> List:
     # doesn't work well because we need the hyperlink to the tournament
     # to get the results
     # Here for reference
-    tournaments_not_included = list(df_dates[~df_dates.Tournament.isin(df_results['Tournament'])]['Tournament'])
+    tournaments_not_included = list(
+        df_dates[~df_dates.Tournament.isin(df_results["Tournament"])]["Tournament"]
+    )
     return tournaments_not_included
 
 
@@ -160,17 +164,19 @@ def convert_links(links: List) -> List:
     Removes duplicates from the list as well.
 
     Args:
-        links (List(set)): Requests response absolute_links results 
+        links (List(set)): Requests response absolute_links results
 
     Returns:
         List(str): Links with # removed
     """
-    convert_set = [', '.join(l.absolute_links) for l in links]  # convert single set to list
+    convert_set = [
+        ", ".join(l.absolute_links) for l in links
+    ]  # convert single set to list
     dedup = list(set(convert_set))  # de-duplicate
     clean_links = []
     for link in dedup:
         if "#" in link:
-            hash_loc = link.find('#')
+            hash_loc = link.find("#")
             clean_links.append(link[:hash_loc])
         else:
             clean_links.append(link)
@@ -188,8 +194,8 @@ def tournament_links(results) -> List:
     Returns:
         List: Flattened links response object
     """
-    data = results.html.find('td.tournament')
-    links = [i.find('a') for i in data]
+    data = results.html.find("td.tournament")
+    links = [i.find("a") for i in data]
     flat_links = [item for sublist in links for item in sublist]
     return convert_links(flat_links)
 
@@ -215,7 +221,7 @@ def get_single_tour_ratings(response, pdga_num: int) -> List:
 
     Converts that to a DataFrame, creates column filter for round
     ratings for players PDGA number.
-    
+
     Converts any floats to an int and returns them in a list.
 
     Args:
@@ -225,10 +231,10 @@ def get_single_tour_ratings(response, pdga_num: int) -> List:
     Returns:
         List: Tournament round ratings
     """
-    tables = response.html.find('.table-container')
+    tables = response.html.find(".table-container")
     table = [t for t in tables if str(pdga_num) in t.text][0]
     df = pd.read_html(table.html)[0]
-    filter_col = [col for col in df if col.startswith('Unnamed')]
+    filter_col = [col for col in df if col.startswith("Unnamed")]
     round_ratings = list(df[df["PDGA#"] == pdga_num][filter_col].values[0])
     round_ratings = [int(r) for r in round_ratings]
     return round_ratings
@@ -265,7 +271,7 @@ def manual_ratings() -> List:
     new_ratings = []
 
     while True:
-        rating_input = input('Add tournament rating [enter to finish]: ')
+        rating_input = input("Add tournament rating [enter to finish]: ")
         if rating_input:
             new_ratings.append(int(rating_input))
         else:
@@ -282,18 +288,21 @@ def combine_ratings(existing_results: List, new_ratings: List, current_rating: i
     final_ratings = []
     for rating in combined_ratings:
         if rating <= exclude_value or (current_rating - rating) >= 100:
-            print(f'Rating removed {rating}')
+            print(f"Rating removed {rating}")
             pass
         else:
             final_ratings.append(rating)
-    return (total_score(final_ratings))
+    return total_score(final_ratings)
 
 
-def ratings_pub_date(current_month = date(date.today().year, date.today().month, 1)):
+def get_second_tues(current_month=date(date.today().year, date.today().month, 1)):
     """PDGA Ratings Publication Date - https://www.pdga.com/faq/ratings/when-updated
 
+    Get second tuesday of month, defaults to current month
+
     Args:
-        current_month (date, optional): date (year, month, day). Defaults to date(date.today().year, date.today().month, 1).
+        current_month (date, optional): date (year, month, day). Defaults to current first day of the month
+        date(date.today().year, date.today().month, 1).
 
     Returns:
         date: second Tuesday of given month
@@ -305,11 +314,71 @@ def ratings_pub_date(current_month = date(date.today().year, date.today().month,
     return second_tues
 
 
+def next_ratings_pub():
+    """Get Next PDGA Ratings Date
+
+    Checks if ratings have been updated for the current month. If so,
+    gets the next rating date.
+
+    Returns:
+        second_tues: Next ratings updates occur on second tues of month
+    """
+    today = date.today()
+    second_tues = get_second_tues(today.replace(day=1))
+    if second_tues > today:
+        return second_tues
+    next_month = today + relativedelta(months=1, day=1)
+    return get_second_tues(next_month)
+
+
+def filter_df(dataframe, date_filter=next_ratings_pub()):
+    """Filter dataframe to remove ratings that will be dropped on next update
+
+    This drops all dates from the last year of the next rating date.
+
+    **Need to fix to drop from date of last rating date**
+
+    # filter df by date
+    # df = df_results[(df_results['Date'] > '2022-05-30') & (df_results['Date'] < '2023-06-01')]
+
+    Args:
+        dataframe (dataframe): PDGA ratings detail
+        date_filter (date): default to Date of next ratings update
+
+    Returns:
+        dataframe: Pandas dataframe with dropped ratings
+    """
+
+    date_cutoff = date_filter - relativedelta(years=1)
+    df = dataframe[
+        (dataframe["Date"] > str(date_cutoff)) & (dataframe["Date"] < str(date_filter))
+    ]
+    print(f"\nFiltering dates between {date_cutoff} - {date_filter}")
+    return df
+
+
+def compare_ratings(new_rating, player_rating):
+    rating_diff = new_rating - player_rating
+    if rating_diff > 0:
+        print(
+            f"\n[blue]New Estimated Rating:[/blue] [bold green]{new_rating} (+{rating_diff})[/bold green]"
+        )
+    else:
+        print(
+            f"\n[blue]New Estimated Rating:[/blue] [bold red]{new_rating} ({rating_diff})[/bold red]"
+        )
+    return rating_diff
+
 
 if __name__ == "__main__":
-    player = Player(input('Enter PDGA Number: '))
+    player = Player(input("Enter PDGA Number: "))
     df_results = trans_data(player.r_detail)
-    print(f'Current Rating: {player.rating}\n')
+    print(f"Current Rating: {player.rating}\n")
     new_ratings = manual_ratings()
-    new_rating = combine_ratings(list(df_results["Rating"]), new_ratings, player.rating)
-    print(f'\nNew Estimated Rating: {new_rating}')
+    # Original
+    # new_rating = combine_ratings(list(df_results["Rating"]), new_ratings, player.rating)
+    # filters ratings to be dropped based on new rating publish date
+    # needs updated to use date of last rated round.
+    df = filter_df(df_results)
+    new_rating = combine_ratings(list(df["Rating"]), new_ratings, player.rating)
+    compare_ratings(new_rating, player.rating)
