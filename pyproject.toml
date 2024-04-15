@@ -7,12 +7,13 @@ readme = "README.md"
 packages = [{include = "pdga_ratings"}]
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.8.5"
 pydantic = "^1.10.7"
 requests-html = "^0.10.0"
 pandas = "^2.0.1"
 python-dateutil = "^2.8.2"
 rich = "^13.3.5"
+lxml = "^4.9.4"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.3.0"

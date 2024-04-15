@@ -228,7 +228,7 @@ def get_single_tour_ratings(response, pdga_num: int) -> List:
     df = pd.read_html(table.html)[0]
     filter_col = [col for col in df if col.startswith("Unnamed")]
     round_ratings = list(df[df["PDGA#"] == pdga_num][filter_col].values[0])
-    round_ratings = [int(r) for r in round_ratings]
+    round_ratings = [int(r) for r in round_ratings if not np.isnan(r)]
     return round_ratings
 
 
@@ -389,3 +389,22 @@ if __name__ == "__main__":
     new_rating = combine_ratings(list(df["Rating"]), new_ratings, player.rating)
     compare_ratings(new_rating, player.rating)
     # player_obj = PlayerBase(**player.__dict__)  # convert player object to model for database input
+
+'''
+Problem is this doesn't check if tournaments were played in the same division
+
+def tour_names(tournaments):
+    return list({t['tournament'] for t in tournaments})
+
+def common_tour(player1, player2):
+    """Take in Player objects and find tournament names
+    that match
+    Args:
+        player1: A Player object
+        player2: A Player object
+    """
+    p1 = tour_names(player1.tournaments)
+    p2 = tour_names(player2.tournaments)
+    match_tours = [t for t in p1 if t in p2]
+    return match_tours
+'''
