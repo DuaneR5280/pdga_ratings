@@ -84,7 +84,7 @@ class Player:
                     "link": list(row.absolute_links)[0],
                     "tier": row.find(".tier", first=True).text,
                     "division": row.find(".division", first=True).text,
-                    "round": int(row.find(".round", first=True).text),
+                    "round": row.find(".round", first=True).text,
                     "score": int(row.find(".score", first=True).text),
                     "rating": int(row.find(".round-rating", first=True).text),
                     "evaluated": row.find("td.evaluated", first=True).text,
