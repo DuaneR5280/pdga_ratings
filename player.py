@@ -1,5 +1,5 @@
 # Player details
-from requests_html import HTMLSession
+from requests_html import HTMLSession, HTMLResponse
 from typing import List
 from datetime import datetime
 
@@ -57,8 +57,11 @@ class Player:
     def get_career_wins(self) -> int:
         try:
             self.career_wins = self.get_stats_by_class("career-wins")
+            if self.career_wins is None:
+                raise ValueError("Career wins not found on the webpage")
             return int(self.career_wins)
-        except Exception:
+        except Exception as e:
+            print(f"Error occurred at career-wins: {e}")
             return 0
 
     def get_upcoming_events(self) -> List:
