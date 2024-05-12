@@ -55,8 +55,11 @@ class Player:
         return int(self.career_events)
 
     def get_career_wins(self) -> int:
-        self.career_wins = self.get_stats_by_class("career-wins")
-        return int(self.career_wins)
+        try:
+            self.career_wins = self.get_stats_by_class("career-wins")
+            return int(self.career_wins)
+        except Exception:
+            return 0
 
     def get_upcoming_events(self) -> List:
         upcoming_list = self.r_stats.html.find(".upcoming-events li")
